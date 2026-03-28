@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local AI Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .output {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            color: #333;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .models-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .model-tag {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #495057;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Local AI Agent</h1>
+            <p>A powerful local AI assistant that runs entirely on your machine</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2>💬 Chat with AI</h2>
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('ask')">Ask</button>
+                    <button class="tab" onclick="switchTab('code')">Generate Code</button>
+                    <button class="tab" onclick="switchTab('analyze')">Analyze File</button>
+                </div>
+                
+                <div id="ask-tab" class="tab-content active">
+                    <div class="input-group">
+                        <label for="question">Your Question</label>
+                        <textarea id="question" placeholder="Ask me anything..."></textarea>
+                    </div>
+                    <button class="btn" onclick="askQuestion()">Ask</button>
+                </div>
+                
+                <div id="code-tab" class="tab-content">
+                    <div class="input-group">
+                        <label for="code-desc">Code Description</label>
+                        <textarea id="code-desc" placeholder="Describe what code you want..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="language">Programming Language</label>
+                        <select id="language">
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="java">Java</option>
+                            <option value="cpp">C++</option>
+                            <option value="go">Go</option>
+                            <option value="rust">Rust</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="generateCode()">Generate Code</button>
+                </div>
+                
+                <div id="analyze-tab" class="tab-content">
+                    <div class="input-group">
+                        <label for="file-path">File Path</label>
+                        <input type="text" id="file-path" placeholder="/path/to/file">
+                    </div>
+                    <div class="input-group">
+                        <label for="analysis-type">Analysis Type</label>
+                        <select id="analysis-type">
+                            <option value="general">General</option>
+                            <option value="code">Code Review</option>
+                            <option value="security">Security</option>
+                            <option value="performance">Performance</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="analyzeFile()">Analyze</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📤 Response</h2>
+                <div id="status"></div>
+                <div id="output" class="output">Your AI response will appear here...</div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>🧠 Available Models</h2>
+            <button class="btn" onclick="loadModels()">Refresh Models</button>
+            <div id="models-list" class="models-list"></div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                showStatus('Connected to AI Agent', 'success');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleResponse(data);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                showStatus('Connection error', 'error');
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket closed');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+        
+        async function askQuestion() {
+            const question = document.getElementById('question').value;
+            if (!question) {
+                showStatus('Please enter a question', 'error');
+                return;
+            }
+            
+            showLoading();
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    action: 'execute',
+                    task: question
+                }));
+            } else {
+                // Fallback to REST API
+                try {
+                    const response = await fetch('/api/execute', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ task: question })
+                    });
+                    const data = await response.json();
+                    handleResponse(data);
+                } catch (error) {
+                    showStatus('Error: ' + error.message, 'error');
+                }
+            }
+        }
+        
+        async function generateCode() {
+            const description = document.getElementById('code-desc').value;
+            const language = document.getElementById('language').value;
+            
+            if (!description) {
+                showStatus('Please enter a description', 'error');
+                return;
+            }
+            
+            showLoading();
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    action: 'generate',
+                    description: description,
+                    language: language
+                }));
+            } else {
+                try {
+                    const response = await fetch('/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ description, language })
+                    });
+                    const data = await response.json();
+                    handleResponse(data);
+                } catch (error) {
+                    showStatus('Error: ' + error.message, 'error');
+                }
+            }
+        }
+        
+        async function analyzeFile() {
+            const filePath = document.getElementById('file-path').value;
+            const analysisType = document.getElementById('analysis-type').value;
+            
+            if (!filePath) {
+                showStatus('Please enter a file path', 'error');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: filePath, type: analysisType })
+                });
+                const data = await response.json();
+                handleResponse(data);
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const modelsList = document.getElementById('models-list');
+                    modelsList.innerHTML = '';
+                    
+                    data.models.forEach(model => {
+                        const tag = document.createElement('span');
+                        tag.className = 'model-tag';
+                        tag.textContent = `${model.name} (${model.backend})`;
+                        modelsList.appendChild(tag);
+                    });
+                    
+                    showStatus(`Found ${data.models.length} models`, 'success');
+                } else {
+                    showStatus('Error loading models: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function showLoading() {
+            document.getElementById('status').innerHTML = '<span class="loading"></span>Processing...';
+            document.getElementById('output').textContent = '';
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = 'status ' + type;
+            status.textContent = message;
+        }
+        
+        function handleResponse(data) {
+            document.getElementById('status').innerHTML = '';
+            
+            if (data.success) {
+                document.getElementById('output').textContent = data.response || JSON.stringify(data, null, 2);
+                showStatus('Task completed successfully', 'success');
+            } else {
+                document.getElementById('output').textContent = 'Error: ' + (data.error || 'Unknown error');
+                showStatus('Task failed', 'error');
+            }
+        }
+        
+        // Initialize
+        connectWebSocket();
+        loadModels();
+    </script>
+</body>
+</html>
